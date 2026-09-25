@@ -1,12 +1,19 @@
 import { TResponseData } from '@/common/types/response-data.type';
-import { ResponseDataHelper } from '@/shared/helper/response-data.helper';
+import { ResponseDataService } from '@/shared/service/response-data.service';
 import { Injectable } from '@nestjs/common';
+import { UsersRepository } from './core/users/users.repository';
 
 @Injectable()
 export class AppService {
-  constructor(private readonly response: ResponseDataHelper) {}
+  constructor(
+    private readonly response: ResponseDataService,
+    private readonly userRepo: UsersRepository,
+  ) {}
   getHello(): TResponseData {
-    const result = this.response.message('OK').toJson();
-    return result;
+    try {
+      return this.response.ok();
+    } catch (error) {
+      return this.response.internalServerError(error);
+    }
   }
 }

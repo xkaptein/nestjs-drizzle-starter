@@ -1,0 +1,282 @@
+services:
+  primary:
+    image: postgres:18-alpine
+    container_name: pg-primary
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data/pgdata
+      REPLICATION_USER: ${REPLICATION_USER}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD}
+    ports:
+      - '55002:5432'
+    volumes:
+      - primary_data:/var/lib/postgresql/data
+      - ./scripts/primary/init-primary.sh:/docker-entrypoint-initdb.d/init-primary.sh:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    networks:
+      - pg_net
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+  replica:
+    image: postgres:18-alpine
+    container_name: pg-replica
+    restart: unless-stopped
+    depends_on:
+      primary:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+      PRIMARY_HOST: ${PRIMARY_HOST:-primary}
+      REPLICATION_USER: ${REPLICATION_USER}
+      REPLICATION_PASSWORD: ${REPLICATION_PASSWORD}
+    ports:
+      - '55003:5432'
+    volumes:
+      - replica_data:/var/lib/postgresql/data
+      - ./scripts/replica/setup-replica.sh:/setup-replica.sh:ro
+    entrypoint: ['/bin/bash', '/setup-replica.sh']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - pg_net
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer
+    restart: unless-stopped
+    depends_on:
+      primary:
+        condition: service_healthy
+      replica:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DB_HOST: primary
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_NAME: ${POSTGRES_DB}
+      AUTH_TYPE: scram-sha-256
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 200
+      DEFAULT_POOL_SIZE: 20
+    ports:
+      - '6432:6432'
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -p 6432 -U ${POSTGRES_USER}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - pg_net
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+  app-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nest-app-1
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PRIMARY: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/app_write
+      DB_REPLICA: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/app_read
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    ports:
+      - '3001:3000'
+    networks:
+      - pg_net
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  app-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nest-app-2
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PRIMARY: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/app_write
+      DB_REPLICA: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/app_read
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    ports:
+      - '3002:3000'
+    networks:
+      - pg_net
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  app-3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nest-app-3
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PRIMARY: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/app_write
+      DB_REPLICA: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/app_read
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    ports:
+      - '3003:3000'
+    networks:
+      - pg_net
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  app-4:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nest-app-4
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_PRIMARY: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/app_write
+      DB_REPLICA: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/app_read
+    depends_on:
+      pgbouncer:
+        condition: service_healthy
+    ports:
+      - '3004:3000'
+    networks:
+      - pg_net
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  nginx-lb:
+    image: nginx:1.27-alpine
+    container_name: nginx-lb
+    depends_on:
+      - app-1
+      - app-2
+      - app-3
+      - app-4
+    ports:
+      - '${NGINX_HTTP_PORT:-80}:80'
+      - '${NGINX_HTTPS_PORT:-443}:443'
+    networks:
+      - pg_net
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '5'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+volumes:
+  primary_data:
+  replica_data:
+
+networks:
+  pg_net:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: docker-pg-net

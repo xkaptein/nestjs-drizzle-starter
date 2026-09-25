@@ -1,8 +1,8 @@
 import { primaryKeyTable, table } from '@/shared/utils/database.utils';
 import { relations } from 'drizzle-orm';
-import { usersSchema } from './users.schema';
+import { users } from './users.schema';
 
-export const auditLogsSchema = table.pgTable('audit_logs', {
+export const auditLogs = table.pgTable('audit_logs', {
   ...primaryKeyTable,
   entityId: table.varchar('entity_id', { length: 32 }).notNull(),
   entityName: table.varchar('entity_name').notNull(),
@@ -11,13 +11,13 @@ export const auditLogsSchema = table.pgTable('audit_logs', {
   createdAt: table.timestamp('created_at', { withTimezone: true }).defaultNow(),
   createdBy: table
     .varchar('created_by', { length: 32 })
-    .references(() => usersSchema.id)
+    .references(() => users.id)
     .notNull(),
 });
 
-export const auditLogsRelation = relations(auditLogsSchema, ({ one }) => ({
-  performed: one(usersSchema, {
-    fields: [auditLogsSchema.createdBy],
-    references: [usersSchema.id],
+export const auditLogsRelations = relations(auditLogs, ({ one }) => ({
+  performed: one(users, {
+    fields: [auditLogs.createdBy],
+    references: [users.id],
   }),
 }));

@@ -4,10 +4,10 @@ import {
   table,
 } from '@/shared/utils/database.utils';
 import { relations } from 'drizzle-orm';
-import { rolesSchema } from './roles.schema';
-import { auditLogsSchema } from './audit-logs.schema';
+import { auditLogs } from './audit-logs.schema';
+import { roles } from './roles.schema';
 
-export const usersSchema = table.pgTable('users', {
+export const users = table.pgTable('users', {
   ...primaryKeyTable,
   firstName: table.varchar('first_name').notNull(),
   lastName: table.varchar('last_name').notNull(),
@@ -15,12 +15,15 @@ export const usersSchema = table.pgTable('users', {
   password: table.varchar('password').notNull(),
   roleId: table
     .varchar('role_id', { length: 32 })
-    .references(() => rolesSchema.id)
+    .references(() => roles.id)
     .notNull(),
   ...databaseTimestampsz,
 });
 
-export const userRelations = relations(usersSchema, ({ many }) => ({
-  role: many(rolesSchema),
-  logs: many(auditLogsSchema),
+export const userRelations = relations(users, ({ many, one }) => ({
+  role: one(roles, {
+    fields: [users.roleId],
+    references: [roles.id],
+  }),
+  logs: many(auditLogs),
 }));

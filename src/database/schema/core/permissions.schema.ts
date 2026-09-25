@@ -4,30 +4,30 @@ import {
   table,
 } from '@/shared/utils/database.utils';
 import { relations } from 'drizzle-orm';
-import { resourcesSchema } from './resources.schema';
-import { rolesSchema } from './roles.schema';
+import { resources } from './resources.schema';
+import { roles } from './roles.schema';
 
-export const permissionsSchema = table.pgTable('permissions', {
+export const permissions = table.pgTable('permissions', {
   ...primaryKeyTable,
   resourceId: table
     .varchar('resource_id', { length: 32 })
-    .references(() => resourcesSchema.id)
+    .references(() => resources.id)
     .notNull(),
   roleId: table
     .varchar('role_id', { length: 32 })
-    .references(() => rolesSchema.id)
+    .references(() => roles.id)
     .notNull(),
   allowedMethod: table.json('allowed_method').notNull(),
   ...databaseTimestampsz,
 });
 
-export const permissionsRelation = relations(permissionsSchema, ({ one }) => ({
-  resource: one(resourcesSchema, {
-    fields: [permissionsSchema.resourceId],
-    references: [resourcesSchema.id],
+export const permissionsRelation = relations(permissions, ({ one }) => ({
+  resource: one(resources, {
+    fields: [permissions.resourceId],
+    references: [resources.id],
   }),
-  role: one(rolesSchema, {
-    fields: [permissionsSchema.roleId],
-    references: [rolesSchema.id],
+  role: one(roles, {
+    fields: [permissions.roleId],
+    references: [roles.id],
   }),
 }));

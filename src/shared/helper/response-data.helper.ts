@@ -5,6 +5,7 @@ import { HttpStatus, Injectable } from '@nestjs/common';
 @Injectable()
 export class ResponseDataHelper {
   private _status: number = HttpStatus.OK;
+  private _statusMessage: string = HTTP_STATUS_MESSAGE[HttpStatus.OK];
   private _data: any = null;
   private _message: string = '';
   private _errorMessage: any = undefined;
@@ -12,9 +13,10 @@ export class ResponseDataHelper {
 
   status(code: number) {
     this._status = code;
+    this._statusMessage = HTTP_STATUS_MESSAGE[code];
     return this;
   }
-  body(data: any) {
+  body(data?: any) {
     this._data = data;
     return this;
   }
@@ -30,7 +32,7 @@ export class ResponseDataHelper {
     return {
       statusCode: this._status,
       message: this._message,
-      statusMessage: HTTP_STATUS_MESSAGE[this._status],
+      statusMessage: this._statusMessage,
       data: this._data,
       errorMessage: this._errorMessage,
     };
