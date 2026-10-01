@@ -56,7 +56,7 @@ async function bootstrap(): Promise<void> {
     customSiteTitle: 'Hospital Information System API',
   });
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }
 bootstrap()
   .then(() => console.log('Server running...'))
