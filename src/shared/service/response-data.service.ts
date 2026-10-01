@@ -12,7 +12,7 @@ export class ResponseDataService {
     private readonly debug: DebugLoggerService,
   ) {}
 
-  ok(data = null, message = 'Success'): TResponseData {
+  ok(data: any = null, message = 'Success'): TResponseData {
     return this.response
       .status(HttpStatus.OK)
       .message(message)

@@ -1,7 +1,8 @@
+import { vineConfig } from '@/config/vine.config';
 import { DatabaseModule } from '@/database/database.module';
 import { HelperModule } from '@/shared/helper/helper.module';
 import { ServiceModule } from '@/shared/service/service.module';
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -28,4 +29,8 @@ import { UsersRepository } from './core/users/users.repository';
   controllers: [AppController],
   providers: [AppService, UsersRepository],
 })
-export class AppModule {}
+export class AppModule implements OnModuleInit {
+  onModuleInit() {
+    vineConfig();
+  }
+}

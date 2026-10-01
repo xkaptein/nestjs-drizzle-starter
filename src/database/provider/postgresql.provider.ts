@@ -3,14 +3,29 @@ import * as schema from '@/database/schema';
 import { EnvironmentService } from '@/shared/service/environment.service';
 import { Provider } from '@nestjs/common';
 import { seconds } from '@nestjs/throttler';
+import chalk from 'chalk';
 import { ExtractTablesWithRelations } from 'drizzle-orm';
 import { drizzle, NodePgQueryResultHKT } from 'drizzle-orm/node-postgres';
 import { PgTransaction, withReplicas } from 'drizzle-orm/pg-core';
 import { Pool } from 'pg';
 
-function createDbPool(primary: Pool, replica: Pool) {
-  const primaryDb = drizzle(primary, { schema });
-  const replicaDb = drizzle(replica, { schema });
+function createDbPool(primary: Pool, replica: Pool, env: EnvironmentService) {
+  const isDevelopment = env.get('NODE_ENV') === 'development';
+  const logger = isDevelopment
+    ? {
+        logQuery(query, params) {
+          console.log(
+            chalk.yellowBright('🔍 SQL:'),
+            chalk.gray(query),
+            chalk.yellowBright('\nParams:'),
+            chalk.rgb(254, 254, 0).bold(JSON.stringify(params)),
+            `\n`,
+          );
+        },
+      }
+    : undefined;
+  const primaryDb = drizzle(primary, { schema, logger });
+  const replicaDb = drizzle(replica, { schema, logger });
   const db = withReplicas(primaryDb, [replicaDb]);
   return db;
 }
@@ -32,7 +47,7 @@ export const PostgreProvider: Provider = {
       connectionString: DB_REPLICA,
     });
 
-    return createDbPool(primaryPool, replicaPool);
+    return createDbPool(primaryPool, replicaPool, env);
   },
 };
 

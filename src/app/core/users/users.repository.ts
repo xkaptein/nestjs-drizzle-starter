@@ -2,7 +2,7 @@ import { POSTGRE_CONNECTION } from '@/common/const/config';
 import { type DatabasePool } from '@/database/provider/postgresql.provider';
 import { users } from '@/database/schema';
 import { Inject, Injectable } from '@nestjs/common';
-import { and, isNull } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 
 export type DataUser = {
   firstName: string;
@@ -23,6 +23,14 @@ export class UsersRepository {
     const result = await this.db.query.users.findMany({
       columns: { password: false },
       where: and(isNull(users.deletedAt)),
+      with: { role: true },
+    });
+    return result;
+  }
+
+  async findByEmail(email: string) {
+    const result = await this.db.query.users.findFirst({
+      where: and(eq(users.email, email), isNull(users.deletedAt)),
       with: { role: true },
     });
     return result;
